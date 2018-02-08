@@ -10,12 +10,28 @@ namespace Polymorph
     {
         static void Main(string[] args)
         {
-            string src = "XFiles";
+            string src = "";
             string outDir = "";
-            if (outDir == "")
+
+            if (args.Length == 0)
             {
+                src = "src";
                 outDir = "out";
+                Console.WriteLine("Не заданы аргументы командной строки. Установлены значения по умолчанию.\n" +
+                    "Ищем исходные данные в папке \"src\"");
             }
+            if (args.Length == 1)
+            {
+                src = args[0];
+                Console.WriteLine(src);
+            }
+            if (args.Length == 2)
+            {
+                src = args[0];
+                outDir = args[1];
+                Console.WriteLine(src + " " + outDir);
+            }
+            
             if (!(Directory.Exists(outDir))) {
                 DirectoryInfo di = Directory.CreateDirectory(outDir);
             }
@@ -66,9 +82,9 @@ namespace Polymorph
                 // Операции с содержимым файла
                 if (tags.Count != 0)
                 {
-                    //if (tags.Contains("swap")) readText = SwapLines(readText);                    
-                    //if (tags.Contains("junk")) readText = Junk(readText);
                     if (tags.Contains("encrypt")) readText = Encrypt(readText);
+                    //if (tags.Contains("swap")) readText = SwapLines(readText);                    
+                    //if (tags.Contains("junk")) readText = Junk(readText);                    
                 }             
             }
             catch (FileNotFoundException ex)
@@ -80,46 +96,51 @@ namespace Polymorph
         #endregion
 
         #region Encrypt
+
+        public static string pKey = "m";
+
+        static string EncodeText(Match m) {          
+
+            byte[] strByte = CryptEncrypt(m.Groups[1].Value, pKey);
+            string hex = "";
+            for (int j = 0; j < strByte.Length; j++)
+            {
+                hex += "\\x" + strByte[j].ToString("X2");
+            }
+            hex = "(char*)XORENGINE.XorStr(\"" + hex + "\", \"" + pKey + "\").c_str()";
+            return hex;
+        }
+        
         private static string Encrypt(string readText)
         {
             List<String> elements = readText.Split('\n').ToList();
             readText = "";
+            bool encryptEnable = false;
             for (int i = 0; i < elements.Count; i++)
             {
-                if (elements[i].Contains("\"") && !elements[i].Contains("include") && !elements[i].Contains("system") && !elements[i].Contains("XORENGINE.XorStr"))
-                {
-                    // code here
-                    
-                    string replacement = "ENCODED";
-                    string pattern = "[\"][^\\\"]*[\"]";
-                    Regex rgx = new Regex(pattern);
-
-                    foreach (Match match in rgx.Matches(elements[i])) {
-                        Console.WriteLine("Вхождение в строке " + (i + 1) + " в столбце " + match.Index + " : " + match.Value);
-
-                        byte[] strByte = CryptEncrypt(match.Value, "m");
-                        string hex = "";
-                        for (int j = 0; j < strByte.Length; j++) {
-                            hex += "\\x" + strByte[j].ToString("X2");
-                        }
-                        Console.WriteLine("Заменено на: " + hex);
-                        
-                        //Тут меняем текст!====================================================================<<<<<<<<<<<<<<<<<<<<<<<<<<
+                if (elements[i].Contains("[enc_string_disable /]"))
+                    encryptEnable = false;
+                if (elements[i].Contains("[enc_string_enable /]"))
+                    encryptEnable = true;
+                if (encryptEnable)
+                    if (elements[i].Contains("\"") 
+                        && !elements[i].Contains("include") 
+                        && !elements[i].Contains("system") 
+                        && !elements[i].Contains("XORENGINE.XorStr"))
+                    {
+                        // code here                    
+                        Regex rx = new Regex("[\"]([^\\\"]*)[\"]");
+                        string result = rx.Replace(elements[i], new MatchEvaluator(EncodeText));                    
+                        readText += result + "\n";
+                        continue; 
                     }
-
-                    string result = rgx.Replace(elements[i], replacement);
-                    Console.WriteLine("Исходная строка:    " + elements[i]);
-                    Console.WriteLine("Шифрованная строка: " + result);
-                    readText += result + "\n";
-                    continue; 
-                }
                 readText += elements[i] + "\n";
             }
-            Console.WriteLine("\nТекст:\n" + readText);
-            //Console.WriteLine(CryptDecrypt(CryptEncrypt("gui.ini", "m"), "m"));
 
+            //Console.WriteLine(readText);
             return readText;
         }
+
         public static byte[] CryptEncrypt(String pText, String pKey)
         {
             byte[] txt = System.Text.Encoding.UTF8.GetBytes(pText);
@@ -130,17 +151,6 @@ namespace Polymorph
             {
                 res[i] = (byte)(txt[i] ^ key[i % key.Length]);
             }
-            
-            //System.Console.WriteLine("Исходная строка (String): " + pText);
-            //System.Console.WriteLine("Ключ шифрования (String): " + pKey);
-            //string tmp = "";
-            //for (int i = 0; i < txt.Length; i++)
-            //    tmp += txt[i] + " ";
-            //System.Console.WriteLine("Исходная строка (byte[]): " + tmp);
-            //tmp = "";
-            //for (int i = 0; i < res.Length; i++)
-            //    tmp += res[i] + " ";
-            //System.Console.WriteLine("Шифрованная строка (byte[]): " + tmp);            
 
             return res;
         }
@@ -155,17 +165,6 @@ namespace Polymorph
                 res[i] = (byte)(pText[i] ^ key[i % key.Length]);
             }
             string result = System.Text.Encoding.UTF8.GetString(res);
-
-            //string tmp = "";
-            //for (int i = 0; i < pText.Length; i++)
-            //    tmp += pText[i] + " ";
-            //System.Console.WriteLine("");
-            //System.Console.WriteLine("Исходная строка для дешифрования (byte[]): " + tmp);
-            //System.Console.WriteLine("Ключ дешифровки (String): " + pKey);
-            //tmp = "";
-            //for (int i = 0; i < result.Length; i++)
-            //    tmp += result[i];
-            //System.Console.WriteLine("Дешифрованная строка (byte[]): " + tmp);
 
             return result;
         }
