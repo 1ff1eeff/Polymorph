@@ -23,20 +23,21 @@ namespace Polymorph
             if (args.Length == 1)
             {
                 src = args[0];
-                Console.WriteLine(src);
+                outDir = "out";
+                //Console.WriteLine(src);
             }
             if (args.Length == 2)
             {
                 src = args[0];
                 outDir = args[1];
-                Console.WriteLine(src + " " + outDir);
+                //Console.WriteLine(src + " " + outDir);
             }
             
             if (!(Directory.Exists(outDir))) {
                 DirectoryInfo di = Directory.CreateDirectory(outDir);
             }
             Junkcode.ProcessDirectory(src, outDir);
-            Console.ReadKey();
+            //Console.ReadKey();
         }
     }
     class Junkcode
@@ -83,8 +84,8 @@ namespace Polymorph
                 if (tags.Count != 0)
                 {
                     if (tags.Contains("encrypt")) readText = Encrypt(readText);
-                    //if (tags.Contains("swap")) readText = SwapLines(readText);                    
-                    //if (tags.Contains("junk")) readText = Junk(readText);                    
+                    if (tags.Contains("swap")) readText = SwapLines(readText);                    
+                    if (tags.Contains("junk")) readText = Junk(readText);                    
                 }             
             }
             catch (FileNotFoundException ex)
@@ -97,7 +98,8 @@ namespace Polymorph
 
         #region Encrypt
 
-        public static string pKey = "m";
+        public static char pKey = 'm';
+        public static int index = 0;        
 
         static string EncodeText(Match m) {          
 
@@ -107,7 +109,9 @@ namespace Polymorph
             {
                 hex += "\\x" + strByte[j].ToString("X2");
             }
-            hex = "(char*)XORENGINE.XorStr(\"" + hex + "\", \"" + pKey + "\").c_str()";
+            int size = strByte.Length;            
+            hex = "XORENGINE.XorStr(" + index + ", " + size + ", \"" + hex + "\")";
+            index++;
             return hex;
         }
         
@@ -128,7 +132,7 @@ namespace Polymorph
                         && !elements[i].Contains("system") 
                         && !elements[i].Contains("XORENGINE.XorStr"))
                     {
-                        // code here                    
+                        // code here                           
                         Regex rx = new Regex("[\"]([^\\\"]*)[\"]");
                         string result = rx.Replace(elements[i], new MatchEvaluator(EncodeText));                    
                         readText += result + "\n";
@@ -141,15 +145,16 @@ namespace Polymorph
             return readText;
         }
 
-        public static byte[] CryptEncrypt(String pText, String pKey)
+        public static byte[] CryptEncrypt(String pText, char pKey)
         {
             byte[] txt = System.Text.Encoding.UTF8.GetBytes(pText);
-            byte[] key = System.Text.Encoding.UTF8.GetBytes(pKey);
+            //byte[] key = System.Text.Encoding.UTF8.GetBytes(pKey);
             byte[] res = new byte[pText.Length];
 
             for (int i = 0; i < pText.Length; i++)
             {
-                res[i] = (byte)(txt[i] ^ key[i % key.Length]);
+                //res[i] = (byte)(txt[i] ^ key[i % key.Length]);
+                res[i] = (byte)(txt[i] ^ ((pKey + i) % 0xFF));
             }
 
             return res;

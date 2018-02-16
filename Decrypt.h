@@ -18,8 +18,9 @@ public:
 	};
 	std::vector< StrStorage_s > storage;
 	std::vector< size_t > ids;
-	char* XorStr(size_t index, size_t size, const char* data, const char* key);
+	char* XorStr(size_t index, size_t size, const char* data);
 private:
 	const int STR_VALUE = 738;
+	const char XORKEY = 'm';
 };
 extern XorStr_c XORENGINE;
